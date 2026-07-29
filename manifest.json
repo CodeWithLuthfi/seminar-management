@@ -1,0 +1,18 @@
+{
+  "name": "Seminar Management System",
+  "short_name": "SeminarApp",
+  "description": "Aplikasi PWA Pengelola Seminar Mandiri",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme-color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921228.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

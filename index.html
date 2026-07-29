@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seminar Management System</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#09090b">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Login Gate Glassmorphism -->
+  <div id="login-gate" class="login-gate-overlay">
+    <div class="login-gate-card">
+      <div class="login-gate-icon">🔒</div>
+      <h3 class="login-gate-title">Aplikasi Terkunci</h3>
+      <p class="login-gate-subtitle">Masukkan password personal untuk mengakses sistem.</p>
+      
+      <div class="form-group" style="text-align:left;">
+        <input type="password" id="inp-gate-password" class="form-control gate-input" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" id="btn-submit-gate" style="margin-top:8px;">Buka Akses</button>
+    </div>
+  </div>
+
+  <div id="loader">
+   <div class="hourglassBackground">
+   <div class="hourglassContainer">
+    <div class="hourglassCurves"></div>
+    <div class="hourglassCapTop"></div>
+    <div class="hourglassGlassTop"></div>
+    <div class="hourglassSand"></div>
+    <div class="hourglassSandStream"></div>
+    <div class="hourglassCapBottom"></div>
+    <div class="hourglassGlass"></div>
+   </div>
+ </div>
+</div>
+
+  <header class="app-header">
+    <h1 id="header-title">Dashboard</h1>
+    <div id="header-actions"></div>
+  </header>
+
+  <div class="container">
+
+    <!-- View Dashboard -->
+    <div id="view-dashboard" class="view active">
+      <div class="grid-stats">
+        
+        <div class="card-stat full" style="background: var(--surface); border-color: rgba(16, 185, 129, 0.3);">
+          <div class="label" style="color: var(--success);">Total Uang Masuk</div>
+          <div class="val" id="dash-uang-masuk" style="color: var(--success);">Rp0</div>
+        </div>
+        
+        <div class="card-stat full" style="background: var(--surface); border-color: rgba(239, 68, 68, 0.3);">
+          <div class="label" style="color: var(--danger);">Total Sisa Tagihan</div>
+          <div class="val" id="dash-sisa-tagihan" style="color: var(--danger);">Rp0</div>
+          
+          <div id="box-draft-alert" style="background: var(--warning-bg); border: 1px solid rgba(245, 158, 11, 0.3); padding: 16px; border-radius: 14px; margin-top: 14px; display: none; text-align: center;">
+            <p style="color: var(--warning); font-weight: 700; font-size: 0.9rem; margin-bottom: 10px;">⚠️ Ada <span id="count-draft">0</span> data offline (Draft)</p>
+            <button class="btn btn-success" id="btn-sync-draft" style="padding: 10px 16px; font-size: 0.85rem; width: auto; box-shadow: none;">🚀 Sinkronkan Sekarang</button>
+          </div>
+        </div>
+
+        <div class="card-stat">
+          <div class="label">Total Peserta</div>
+          <div class="val" id="dash-peserta">0</div>
+        </div>
+
+        <div class="card-stat" id="btn-stat-lunas" style="cursor: pointer; border: 1.5px solid var(--success); background: var(--success-bg);">
+          <div class="label" style="color: var(--success); font-weight: 700;">Peserta Lunas 📊</div>
+          <div class="val" id="dash-lunas" style="color: var(--success);">0</div>
+          <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px; font-weight:600;">Klik untuk detail</div>
+        </div>
+
+        <div class="card-stat">
+          <div class="label">Tiket Reguler</div>
+          <div class="val" id="dash-reguler">0</div>
+        </div>
+        <div class="card-stat">
+          <div class="label">Tiket VIP</div>
+          <div class="val" id="dash-vip">0</div>
+        </div>
+        <div class="card-stat full">
+          <div class="label">Peserta Status DP / Cicil</div>
+          <div class="val" id="dash-cicil" style="color: var(--warning);">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Lunas Filter -->
+    <div id="view-lunas-filter" class="view">
+      <button class="btn btn-secondary" onclick="switchView('dashboard')" style="margin-bottom:16px;">← Kembali ke Dashboard</button>
+      <div style="background: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: var(--shadow-sm);">
+        <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:10px;">Pilih Jenis Tiket Lunas:</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <button class="btn btn-secondary btn-filter-reguler" id="btn-filter-lunas-reguler">🎟️ Reguler</button>
+          <button class="btn btn-secondary btn-filter-vip" id="btn-filter-lunas-vip">👑 VIP</button>
+        </div>
+      </div>
+      <h4 id="title-list-lunas" style="margin-bottom: 12px; color: var(--text-secondary); font-weight:700; font-size:0.95rem;">Daftar Peserta:</h4>
+      <div id="list-lunas-filtered-container"></div>
+    </div>
+
+    <!-- View Event -->
+    <div id="view-event" class="view">
+      <div id="form-event-baru" style="background:var(--surface); padding:20px; border-radius:16px; border:1px solid var(--border); margin-bottom:20px; box-shadow: var(--shadow-md); display:none;">
+        <h4 id="form-event-title" style="margin-bottom:14px; font-weight:800;">Buat Event Baru</h4>
+        <input type="hidden" id="inp-evt-id">
+        <div class="form-group">
+          <label>Nama Event</label>
+          <input type="text" id="inp-evt-nama" class="form-control" placeholder="Contoh: Seminar Akbar">
+        </div>
+        <div class="form-group">
+          <label>Tanggal Pelaksanaan</label>
+          <input type="date" id="inp-evt-tanggal" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Lokasi / Tempat</label>
+          <input type="text" id="inp-evt-lokasi" class="form-control" placeholder="Contoh: Aula Utama">
+        </div>
+        <div style="display:flex; gap:12px; margin-top:6px;">
+          <button type="button" class="btn btn-primary" id="btn-submit-event">Simpan Event</button>
+          <button type="button" class="btn btn-secondary" id="btn-batal-event">Batal</button>
+        </div>
+      </div>
+      <div id="list-event-container"></div>
+    </div>
+
+    <!-- View Sekolah -->
+    <div id="view-sekolah" class="view">
+      <button class="btn btn-secondary" onclick="switchView('event')" style="margin-bottom:16px;">← Kembali ke Event</button>
+      <div id="list-sekolah-container"></div>
+    </div>
+
+    <!-- View Kelas -->
+    <div id="view-kelas" class="view">
+      <button class="btn btn-secondary" onclick="switchView('sekolah', {id_event: CURRENT_CONTEXT.id_event})" style="margin-bottom:16px;">← Kembali ke Sekolah</button>
+      <div id="list-kelas-container"></div>
+    </div>
+
+    <!-- View Peserta -->
+    <div id="view-peserta" class="view">
+      <button class="btn btn-secondary" onclick="switchView('kelas', {id_event: CURRENT_CONTEXT.id_event, id_sekolah: CURRENT_CONTEXT.id_sekolah})" style="margin-bottom:16px;">← Kembali ke Kelas</button>
+      <div id="list-peserta-container"></div>
+    </div>
+
+    <!-- View Detail Peserta -->
+    <div id="view-detail-peserta" class="view">
+      <button class="btn btn-secondary" onclick="switchView('peserta', {id_kelas: CURRENT_CONTEXT.id_kelas})" style="margin-bottom:16px;">← Kembali ke Daftar Peserta</button>
+      <div id="detail-peserta-container" style="margin-bottom:20px;"></div>
+      <div style="background:var(--surface); padding:20px; border-radius:16px; border:1px solid var(--border); box-shadow: var(--shadow-sm); display:flex; flex-direction:column; gap:12px;">
+        <button class="btn btn-success" id="btn-wa-detail">💬 Hubungi via WhatsApp</button>
+        <button class="btn btn-primary" id="btn-bayar-detail">+ Catat Cicilan Baru</button>
+        <button class="btn btn-danger" id="btn-hapus-detail">🗑️ Hapus Anak Ini</button>
+        <button class="btn btn-secondary" onclick="bukaFormEditPeserta()">✏️ Edit Profil Peserta</button>
+      </div>
+    </div>
+
+    <!-- View Edit Form Peserta -->
+    <div id="view-edit-peserta-form" class="view">
+      <h3 style="margin-bottom:20px; font-weight:800;">Edit Profil Peserta</h3>
+      <div class="form-group">
+        <label>Nama Peserta</label>
+        <input type="text" id="edit-peserta-nama" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>No. WhatsApp</label>
+        <input type="text" id="edit-peserta-wa" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Jenis Tiket</label>
+        <select id="edit-peserta-tiket" class="form-control">
+          <option value="Reguler">Reguler</option>
+          <option value="VIP">VIP</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Catatan</label>
+        <textarea id="edit-peserta-catatan" class="form-control" rows="3"></textarea>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button class="btn btn-primary" id="btn-save-edit-peserta">Simpan Perubahan</button>
+        <button class="btn btn-secondary" onclick="switchView('detail-peserta', {id_peserta: CURRENT_CONTEXT.id_peserta})">Batal</button>
+      </div>
+    </div>
+
+    <!-- View Input Cepat -->
+    <div id="view-input-cepat" class="view">
+      <div class="form-group">
+        <label>Pilih Target Event</label>
+        <select id="inp-event" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label>Nama Sekolah</label>
+        <input type="text" id="inp-sekolah-nama" class="form-control" placeholder="Ketik nama sekolah..." list="list-saran-sekolah">
+        <datalist id="list-saran-sekolah"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Nama Kelas</label>
+        <input type="text" id="inp-kelas-nama" class="form-control" placeholder="Contoh: XI IPA">
+      </div>
+      <div class="form-group">
+        <label>Penanggung Jawab Kelas</label>
+        <input type="text" id="inp-kelas-pj" class="form-control" placeholder="Nama Guru / Wali / Koordinator">
+      </div>
+      <div class="form-group">
+        <label>Nama Lengkap Anak</label>
+        <input type="text" id="inp-peserta-nama" class="form-control" placeholder="Nama lengkap siswa">
+      </div>
+      <div class="form-group">
+        <label>No. WhatsApp</label>
+        <input type="text" id="inp-peserta-wa" class="form-control" placeholder="Contoh: 081234xxx">
+      </div>
+      <div class="form-group">
+        <label>Jenis Tiket</label>
+        <select id="inp-peserta-tiket" class="form-control">
+          <option value="Reguler">Reguler</option>
+          <option value="VIP">VIP</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin: 6px 0 16px 0;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600;">
+          <input type="checkbox" id="inp-peserta-trans" style="width:20px; height:20px; accent-color:var(--primary);"> Termasuk Transportasi?
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Catatan Tambahan</label>
+        <input type="text" id="inp-peserta-catatan" class="form-control" placeholder="Opsional">
+      </div>
+      
+      <div class="form-group" style="margin-top:24px; padding-top:20px; border-top:1px dashed var(--border);">
+        <label style="color:var(--primary); font-weight:800;">Nominal Pembayaran DP (Ketik Angka Ribuan Awal)</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span style="font-weight:800; color:var(--text-secondary); font-size:1.1rem;">Rp</span>
+          <input type="number" id="inp-cepat-bayar" class="form-control" placeholder="Contoh ketik 50 untuk 50.000" style="flex:1; border-color:var(--primary); font-weight:700;">
+          <span style="font-weight:800; color:var(--text-secondary); font-size:1.1rem;">.000</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Metode Pembayaran</label>
+        <select id="inp-cepat-metode" class="form-control">
+          <option value="Cash">Cash</option>
+          <option value="Transfer">Transfer</option>
+        </select>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px;">
+        <button class="btn btn-primary" id="btn-simpan-cepat">⚡ Kirim Online</button>
+        <button class="btn" id="btn-simpan-draft" style="background: #f59e0b; color: white; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">📂 Ke Draft (Offline)</button>
+      </div>
+    </div>
+
+<!-- View Menu Cetak (Dual Formulir) -->
+<div id="view-menu-cetak" class="view">
+  <div style="background:var(--surface); padding:20px; border-radius:16px; border:1px solid var(--border); box-shadow: var(--shadow-sm);">
+    <h3 style="margin-bottom:16px; font-weight:800; color:var(--primary);">🖨️ Cetak Formulir Pendaftaran</h3>
+    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:20px;">
+      Pilih kelas untuk Formulir Kiri dan Kanan. Jika hanya memilih 1 kelas, tentukan posisi cetak yang diinginkan.
+    </p>
+
+    <!-- FORMULIR KIRI -->
+    <div style="border: 1px dashed var(--border); padding: 14px; border-radius: 12px; margin-bottom: 16px;">
+      <h4 style="color:var(--primary); margin-bottom: 10px;">📋 Formulir Sisi Kiri</h4>
+      <div class="form-group">
+        <label>Pilih Sekolah</label>
+        <select id="cetak-sekolah-kiri" class="form-control" onchange="onCetakSekolahChange('kiri')">
+          <option value="">-- Kosongkan Sisi Kiri --</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label>Pilih Kelas</label>
+        <select id="cetak-kelas-kiri" class="form-control" disabled>
+          <option value="">-- Pilih Sekolah Terlebih Dahulu --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- FORMULIR KANAN -->
+    <div style="border: 1px dashed var(--border); padding: 14px; border-radius: 12px; margin-bottom: 16px;">
+      <h4 style="color:var(--primary); margin-bottom: 10px;">📋 Formulir Sisi Kanan</h4>
+      <div class="form-group">
+        <label>Pilih Sekolah</label>
+        <select id="cetak-sekolah-kanan" class="form-control" onchange="onCetakSekolahChange('kanan')">
+          <option value="">-- Kosongkan Sisi Kanan --</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label>Pilih Kelas</label>
+        <select id="cetak-kelas-kanan" class="form-control" disabled>
+          <option value="">-- Pilih Sekolah Terlebih Dahulu --</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-proses-cetak" style="margin-top:10px;" onclick="triggerEksekusiCetak()">🖨️ Cetak Formulir Sekarang</button>
+  </div>
+</div>
+
+        
+
+  </div> 
+  
+  <!-- Navigasi Bawah Modern (4 Menu) -->
+  <nav class="nav-bottom">
+    <button class="nav-item active" onclick="switchView('dashboard')">
+      <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-item" onclick="switchView('event')">
+      <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+      <span>Event</span>
+    </button>
+    <button class="nav-item" onclick="switchView('input-cepat')">
+      <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span>Input Cepat</span>
+    </button>
+    <button class="nav-item" onclick="switchView('menu-cetak')">
+      <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+      <span>Menu Cetak</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+
+  <!-- Modal Popup Catat Cicilan Baru -->
+<div id="modal-cicilan" class="login-gate-overlay" style="display: none;">
+  <div class="login-gate-card" style="text-align: left; max-width: 400px;">
+    <h3 style="margin-bottom: 12px; font-weight: 800; color: var(--primary);">Catat Cicilan Baru</h3>
+    
+    <div class="form-group">
+      <label>Nominal Cicilan (Ketik Ribuan Awal)</label>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span style="font-weight:800; color:var(--text-secondary); font-size:1.1rem;">Rp</span>
+        <input type="number" id="inp-modal-bayar" class="form-control" placeholder="Contoh: 50 untuk 50.000" style="flex:1; border-color:var(--primary); font-weight:700;">
+        <span style="font-weight:800; color:var(--text-secondary); font-size:1.1rem;">.000</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Metode Pembayaran</label>
+      <select id="inp-modal-metode" class="form-control">
+        <option value="Cash">Cash</option>
+        <option value="Transfer">Transfer</option>
+      </select>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="btn btn-primary" id="btn-modal-kirim-online">⚡ Kirim Online</button>
+        <button class="btn" id="btn-modal-draft-cicilan" style="background: #f59e0b; color: white;">📂 Ke Draft</button>
+      </div>
+      <button class="btn btn-secondary" onclick="tutupModalCicilan()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- AREA TEMPLATE CETAK FORMULIR CANVA (A4 LANDSCAPE: 2 DUAL FORMULIR KIRI & KANAN) -->
+<div id="print-area">
+  <div class="print-container-dual">
+    
+    <!-- FORMULIR KIRI -->
+    <div class="print-form-half">
+      <div class="print-header">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="font-weight: 900; font-size: 14pt; line-height: 1;">
+            STIFIn<br><span style="font-size: 8pt; font-weight: 900; letter-spacing: 1px;">GENETIC</span>
+          </div>
+          <div class="print-title-box" style="flex: 1;">
+            <div class="print-title">FORMULIR PENDAFTARAN PESERTA</div>
+            <div class="print-subtitle">STIFIn EDU-TAINMENT 2026</div>
+            <div class="print-tagline">“Unleash Your Best Potential”</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="print-meta">
+        SEKOLAH : <span class="print-sekolah-val">-</span><br>
+        KELAS : <span class="print-kelas-val">-</span><br>
+        SOSIALITATOR : <span class="print-pj-val">-</span>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th class="col-no">NO</th>
+            <th class="col-nama">NAMA LENGKAP</th>
+            <th class="col-tiket">JENIS TIKET</th>
+            <th class="col-dp">JUMLAH DP</th>
+          </tr>
+        </thead>
+        <tbody class="print-table-body-left">
+          <!-- Baris rendered via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- GARIS POTONG TENGAH -->
+    <div class="print-divider"></div>
+
+    <!-- FORMULIR KANAN -->
+    <div class="print-form-half">
+      <div class="print-header">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="font-weight: 900; font-size: 14pt; line-height: 1;">
+            STIFIn<br><span style="font-size: 8pt; font-weight: 900; letter-spacing: 1px;">GENETIC</span>
+          </div>
+          <div class="print-title-box" style="flex: 1;">
+            <div class="print-title">FORMULIR PENDAFTARAN PESERTA</div>
+            <div class="print-subtitle">STIFIn EDU-TAINMENT 2026</div>
+            <div class="print-tagline">“Unleash Your Best Potential”</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="print-meta">
+        SEKOLAH : <span class="print-sekolah-val">-</span><br>
+        KELAS : <span class="print-kelas-val">-</span><br>
+        SOSIALITATOR : <span class="print-pj-val">-</span>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th class="col-no">NO</th>
+            <th class="col-nama">NAMA LENGKAP</th>
+            <th class="col-tiket">JENIS TIKET</th>
+            <th class="col-dp">JUMLAH DP</th>
+          </tr>
+        </thead>
+        <tbody class="print-table-body-right">
+          <!-- Baris rendered via JS -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
