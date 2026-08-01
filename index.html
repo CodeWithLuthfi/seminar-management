@@ -24,18 +24,28 @@
     </div>
   </div>
 
-  <div id="loader">
-   <div class="hourglassBackground">
-   <div class="hourglassContainer">
-    <div class="hourglassCurves"></div>
-    <div class="hourglassCapTop"></div>
-    <div class="hourglassGlassTop"></div>
-    <div class="hourglassSand"></div>
-    <div class="hourglassSandStream"></div>
-    <div class="hourglassCapBottom"></div>
-    <div class="hourglassGlass"></div>
-   </div>
- </div>
+ <!-- Toast Notification -->
+<div id="toast-notification" class="toast-container">
+  <span id="toast-message">Notifikasi</span>
+</div>
+
+<!-- Loader Overlay dengan Elemen Teks Status -->
+<div id="loader">
+  <div class="loader-content">
+    <div class="hourglassBackground">
+      <div class="hourglassContainer">
+        <div class="hourglassCurves"></div>
+        <div class="hourglassCapTop"></div>
+        <div class="hourglassGlassTop"></div>
+        <div class="hourglassSand"></div>
+        <div class="hourglassSandStream"></div>
+        <div class="hourglassCapBottom"></div>
+        <div class="hourglassGlass"></div>
+      </div>
+    </div>
+    <!-- Elemen teks status baru -->
+    <div id="loader-status" class="loader-status-text">Memproses data...</div>
+  </div>
 </div>
 
   <header class="app-header">
@@ -152,6 +162,8 @@
       <button class="btn btn-secondary" onclick="switchView('peserta', {id_kelas: CURRENT_CONTEXT.id_kelas})" style="margin-bottom:16px;">← Kembali ke Daftar Peserta</button>
       <div id="detail-peserta-container" style="margin-bottom:20px;"></div>
       <div style="background:var(--surface); padding:20px; border-radius:16px; border:1px solid var(--border); box-shadow: var(--shadow-sm); display:flex; flex-direction:column; gap:12px;">
+        <!-- TOMBOL VCF INDIVIDUAL -->
+        <button class="btn btn-secondary" id="btn-vcf-detail" style="border-color: var(--primary); color: var(--primary);">📇 Simpan Kontak ke HP (VCF)</button>
         <button class="btn btn-success" id="btn-wa-detail">💬 Hubungi via WhatsApp</button>
         <button class="btn btn-primary" id="btn-bayar-detail">+ Catat Cicilan Baru</button>
         <button class="btn btn-danger" id="btn-hapus-detail">🗑️ Hapus Anak Ini</button>
@@ -298,11 +310,44 @@
   </div>
 </div>
 
-        
+ <!-- VIEW: FOLLOW UP -->
+    <div id="view-follow-up" class="view">
+      <div style="background: var(--surface); padding: 18px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-weight: 800; color: var(--primary);">Daftar Follow Up Peserta</h3>
+          <span class="badge badge-dp" id="total-followup-badge">0 Perlu Follow Up</span>
+        </div>
+
+        <div class="filter-bar" style="display: flex; gap: 8px;">
+          <!-- Input Cari Nama / No HP -->
+          <input 
+            type="text" 
+            id="search-followup" 
+            class="form-control"
+            placeholder="Cari nama / no HP..." 
+            oninput="filterFollowUp()"
+            style="flex: 1;"
+          />
+          
+          <!-- Filter Event -->
+          <select 
+            id="filter-followup-event" 
+            class="form-control"
+            onchange="filterFollowUp()"
+            style="width: 40%;"
+          >
+            <option value="all">Semua Event</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Container List Follow Up -->
+      <div id="followup-list"></div>
+    </div>
 
   </div> 
   
-  <!-- Navigasi Bawah Modern (4 Menu) -->
+  <!-- Navigasi Bawah Modern (5 Menu) -->
   <nav class="nav-bottom">
     <button class="nav-item active" onclick="switchView('dashboard')">
       <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg>
@@ -319,6 +364,12 @@
     <button class="nav-item" onclick="switchView('menu-cetak')">
       <svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
       <span>Menu Cetak</span>
+    </button>
+    <button class="nav-item" onclick="switchView('follow-up')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+      </svg>
+      <span>Follow Up</span>
     </button>
   </nav>
 
@@ -435,6 +486,35 @@
       </table>
     </div>
 
+  </div>
+</div>
+
+<!-- Modal Template WhatsApp (Digunakan oleh Detail Peserta & Follow Up) -->
+<div id="modal-wa-template" class="login-gate-overlay" style="display: none;">
+  <div class="login-gate-card" style="text-align: left; max-width: 420px;">
+    <h3 style="margin-bottom: 6px; font-weight: 800; color: var(--primary);">Pilih Pesan WhatsApp</h3>
+    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+      Kirim pesan ke: <b id="wa-modal-nama-peserta" style="color: var(--text);">-</b><br>
+      Sisa Tagihan: <b id="wa-modal-sisa-tagihan" style="color: var(--danger); font-weight: 700;">-</b>
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <button class="btn btn-secondary" onclick="eksekusiKirimWA('1')" style="text-align: left; justify-content: flex-start; padding: 12px;">
+        🎉 <b>Template 1: Selamat & Info Pendaftaran</b>
+      </button>
+
+      <button class="btn btn-secondary" onclick="eksekusiKirimWA('2')" style="text-align: left; justify-content: flex-start; padding: 12px;">
+        😊 <b>Template 2: Pengingat Ramah (Cicilan)</b>
+      </button>
+
+      <button class="btn btn-secondary" onclick="eksekusiKirimWA('3')" style="text-align: left; justify-content: flex-start; padding: 12px; border-color: rgba(239,68,68,0.4);">
+        ⚠️ <b>Template 3: Peringatan Keras (Deadline)</b>
+      </button>
+
+      <button class="btn btn-danger" onclick="tutupModalWA()" style="margin-top: 6px;">
+        Batal
+      </button>
+    </div>
   </div>
 </div>
 

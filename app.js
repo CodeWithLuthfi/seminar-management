@@ -1,6 +1,23 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxd0BKE2PObmp8FPLtuuwvQnWSoXlr1Squ2aE_D2BRENR6QctYh0IfMkrEF5R_8WEDm/exec"; 
 const APP_PASSWORD = "2"; 
 
+function showToast(message, isError = false) {
+  const toast = document.getElementById("toast-notification");
+  const toastMsg = document.getElementById("toast-message");
+  if (!toast || !toastMsg) {
+    alert(message);
+    return;
+  }
+
+  toastMsg.innerText = message;
+  toast.style.borderColor = isError ? "var(--danger)" : "var(--primary)";
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3500);
+}
+
 // --- HELPER PERHITUNGAN TANGGAL & DEADLINE ---
 function hitungTenggatWaktu(tanggalDaftarStr) {
   if (!tanggalDaftarStr) return "-";
@@ -81,6 +98,10 @@ function setupEventListeners() {
   if (btnSimpanDraft) {
     btnSimpanDraft.addEventListener("click", simpanKeDraftOffline);
   }
+  const btnVcfDetail = document.getElementById("btn-vcf-detail");
+  if (btnVcfDetail) {
+  btnVcfDetail.addEventListener("click", downloadVCFPesertaDetail);
+}
   const btnSyncDraft = document.getElementById("btn-sync-draft");
   if (btnSyncDraft) {
     btnSyncDraft.addEventListener("click", sinkronkanDraftOnline);
@@ -169,86 +190,64 @@ function setupEventListeners() {
     });
   }
 
+  // Event Listener Tombol WA di Profil Peserta
   const btnWaDetail = document.getElementById("btn-wa-detail");
-  if(btnWaDetail) {
+  if (btnWaDetail) {
     btnWaDetail.addEventListener("click", () => {
       const p = APP_STATE.peserta.find(x => x.id_peserta == CURRENT_CONTEXT.id_peserta);
-      if(!p) return;
-
-      // Template pesan resmi STIFIn 2026 dengan Nama Peserta Otomatis
-      const teksPesan = `Salam Sukses Mulia.. ✊
-
- *"Perubahan Hidup Butuh Perbedaan Tindakan, Tanpa perbedaan tindakan perubahan adalah omong kosong"*
-
-*SELAMAT* ! 
-${p.nama_peserta} Kamu Terdaftar di Acara Roadshow *EVENT EDUTAINMENT STIFIn 2026 Kabupaten Labuhan batu* diselenggarakan oleh STIFIn Genetic Cabang SUMUT. 
-Bersama 
-1. *Mis. Eliza Fazira, S.T* (Branch Manager STIFIn Genetic Indonesia) & 
-2. *Mr. Saad Budiman Lubis, S.Pd.I., M.M.* (Trainer dan Motivator)
-
-Untuk  Pembayaran selanjutnya di lakukan mulai besok dikumpul ke perwakilan Kelas.
-Bagi peserta yg sudah Lunas akan segera langsung mendapatkan *E-TIKET (BARCODE)* 
-
-Pembayaran bisa dilakukan secara langsung (cash) ke panitia atau lewat transfer :
-1. Transfer ke Rekening 
-         BSI : 
-         7191133786
-         M. Ikbal siregar
-
-2. DANA 0823 7084 1566
-3. Gopay 0823 7084 1566
-
-Note :
-_*Nama yang sudah terdaftar sudah di input, dan uang yang sudah masuk tidak bisa di tarik kembali*_
-
-Terima Kasih🙏🏻☺️
-
-Yuuk silahkan di Follow ya IG 👇🏻 :
-@stifingenetic
-
-
-#GerakanSadarPotensi
-#Character
-#SelaluAdaJalan
-#stifingenetic`;
-      
-      let nomorFormatted = p.whatsapp.trim();
-      if(nomorFormatted.startsWith("0")) nomorFormatted = "62" + nomorFormatted.slice(1);
-      
-      window.open(`whatsapp://send?phone=${nomorFormatted}&text=${encodeURIComponent(teksPesan)}`, '_blank');
-  })
-  }
-  const btnBayarDetail = document.getElementById("btn-bayar-detail");
-  if(btnBayarDetail) {
-    btnBayarDetail.addEventListener("click", () => {
-      document.getElementById("inp-modal-bayar").value = "";
-      document.getElementById("modal-cicilan").style.display = "flex";
-    });
-  }
-
-  const btnModalKirim = document.getElementById("btn-modal-kirim-online");
-  if(btnModalKirim) {
-    btnModalKirim.addEventListener("click", async () => {
-      const nominalRaw = document.getElementById("inp-modal-bayar").value.trim();
-      const metode = document.getElementById("inp-modal-metode").value;
-
-      if(!nominalRaw || isNaN(nominalRaw) || Number(nominalRaw) <= 0) {
-        alert("Masukkan nominal pembayaran yang valid!"); return;
+      if (!p) {
+        alert("Data peserta tidak ditemukan!");
+        return;
       }
 
-      tutupModalCicilan();
-      showLoader(true);
-      try {
-        await fetchFromBackend({ action: 'addPembayaran', payload: { id_peserta: CURRENT_CONTEXT.id_peserta, jumlah_bayar: Number(nominalRaw) * 1000, metode: metode } });
-        await initApp();
-        switchView('detail-peserta', { id_peserta: CURRENT_CONTEXT.id_peserta });
-        alert("Pembayaran Berhasil Dicatat!");
-      } catch(err) { alert(err); } finally { showLoader(false); }
+      // Tampilkan nama & sisa tagihan peserta di modal
+      const elNama = document.getElementById("wa-modal-nama-peserta");
+      if (elNama) elNama.innerText = p.nama_peserta;
+
+      const elSisa = document.getElementById("wa-modal-sisa-tagihan");
+      if (elSisa) elSisa.innerText = formatRupiah(Number(p.sis_tagihan || 0));
+
+      // Buka Modal Pop-up Cantik
+      const modal = document.getElementById("modal-wa-template");
+      if (modal) modal.style.display = "flex";
     });
   }
 
   const btnModalDraft = document.getElementById("btn-modal-draft-cicilan");
   if(btnModalDraft) btnModalDraft.addEventListener("click", simpanCicilanKeDraft);
+  
+  const btnModalKirimOnline = document.getElementById("btn-modal-kirim-online");
+  if (btnModalKirimOnline) {
+  btnModalKirimOnline.addEventListener("click", async () => {
+    const nominalRaw = document.getElementById("inp-modal-bayar").value.trim();
+    const metode = document.getElementById("inp-modal-metode").value;
+
+    if (!nominalRaw || isNaN(nominalRaw) || Number(nominalRaw) <= 0) {
+      alert("Masukkan nominal pembayaran yang valid!");
+      return;
+    }
+
+    showLoader(true);
+    try {
+      await fetchFromBackend({
+        action: 'addPembayaran',
+        payload: {
+          id_peserta: CURRENT_CONTEXT.id_peserta,
+          jumlah_bayar: Number(nominalRaw) * 1000,
+          metode: metode
+        }
+      });
+      tutupModalCicilan();
+      await initApp();
+      switchView('detail-peserta', { id_peserta: CURRENT_CONTEXT.id_peserta });
+      alert("Pembayaran cicilan berhasil dicatat!");
+    } catch (e) {
+      alert(e);
+    } finally {
+      showLoader(false);
+    }
+  });
+}
 
   const btnHapusDetail = document.getElementById("btn-hapus-detail");
   if(btnHapusDetail) {
@@ -283,6 +282,18 @@ Yuuk silahkan di Follow ya IG 👇🏻 :
       } catch(e) { alert(e); } finally { showLoader(false); }
     });
   }
+   // Event listener khusus tombol "Catat Cicilan Baru" di profil peserta
+ const btnBayarDetail = document.getElementById("btn-bayar-detail");
+ if (btnBayarDetail) {
+  btnBayarDetail.addEventListener("click", () => {
+    const modal = document.getElementById("modal-cicilan");
+    const inpBayar = document.getElementById("inp-modal-bayar");
+    if (modal) {
+      if (inpBayar) inpBayar.value = "";
+      modal.style.display = "flex";
+    }
+  });
+}
 }
 
 function tutupModalCicilan() {
@@ -372,17 +383,21 @@ function checkDraftQueue() {
   }
 }
 
+// 2. Update fungsi sinkronkanDraftOnline dengan indikator progress detail
 async function sinkronkanDraftOnline() {
   let currentDrafts = JSON.parse(localStorage.getItem("offline_drafts")) || [];
   if(currentDrafts.length === 0) return;
 
   if(!confirm(`Kirim ${currentDrafts.length} data draft ini ke Google Sheets?`)) return;
 
-  showLoader(true);
   const totalData = currentDrafts.length;
 
   for(let i = 0; i < totalData; i++) {
     const dataToSend = currentDrafts[i];
+    const namaSubject = dataToSend.nama_peserta || `Data ke-${i+1}`;
+    
+    // Indikator status & counter progress
+    showLoader(true, `🔄 Mengirim: ${namaSubject}\n(${i + 1} dari ${totalData} data)`);
 
     try {
       if(dataToSend.tipe_draft === 'cicilan_saja') {
@@ -422,10 +437,10 @@ async function sinkronkanDraftOnline() {
           });
         }
       }
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
     } catch (err) {
       showLoader(false);
-      alert(`🚨 Error saat mengirim ${dataToSend.nama_peserta || 'data'}. Sisa data aman.`);
+      showToast(`🚨 Kendala saat mengirim ${namaSubject}. Sisa draft tersimpan aman.`, true);
       const remainingDrafts = currentDrafts.slice(i);
       localStorage.setItem("offline_drafts", JSON.stringify(remainingDrafts));
       checkDraftQueue();
@@ -434,9 +449,11 @@ async function sinkronkanDraftOnline() {
   }
 
   localStorage.removeItem("offline_drafts");
+  showLoader(true, "Memperbarui database...");
   await initApp(); 
   checkDraftQueue();
-  alert("🚀 Berhasil! Semua data draft offline telah disinkronkan ke Google Sheets!");
+  showLoader(false);
+  showToast("🚀 Berhasil! Semua draft offline telah terkirim.");
 }
 
 async function initApp() {
@@ -470,8 +487,11 @@ async function fetchFromBackend(payload) {
   }
 }
 
-function showLoader(show) {
+// 1. Update fungsi showLoader agar bisa terima pesan teks custom
+function showLoader(show, textMessage = "Memproses data...") {
   const loader = document.getElementById("loader");
+  const statusEl = document.getElementById("loader-status");
+  if(statusEl) statusEl.innerText = textMessage;
   if(loader) loader.style.display = show ? "flex" : "none";
 }
 
@@ -515,7 +535,9 @@ function switchView(viewName, contextParams = {}) {
       break;
     case 'peserta':
       if(titleEl) titleEl.innerText = getKelasName(CURRENT_CONTEXT.id_kelas);
-      if (headerActions) headerActions.innerHTML = `<button class="btn-add-header" onclick="triggerCetakLangsung()">🖨️ Cetak</button>`;
+      if (headerActions) headerActions.innerHTML = `
+      <button class="btn-add-header" style="background:var(--surface-secondary); color:var(--text); border:1px solid var(--border); margin-right:6px;" onclick="downloadVCFSatuKelas()">📇 VCF Kelas</button>
+      <button class="btn-add-header" onclick="triggerCetakLangsung()">🖨️ Cetak</button>`;
       renderPesertaList();
       break;
     case 'detail-peserta':
@@ -531,7 +553,12 @@ function switchView(viewName, contextParams = {}) {
       if(document.querySelectorAll('.nav-item')[3]) document.querySelectorAll('.nav-item')[3].classList.add('active');
       populateCetakFilterSekolah();
       break;
-  }
+      case 'follow-up':
+      if(titleEl) titleEl.innerText = "Follow Up Peserta";
+      if(document.querySelectorAll('.nav-item')[4]) document.querySelectorAll('.nav-item')[4].classList.add('active');
+      renderFollowUpList();
+      break;
+}
 }
 
 function formatRupiah(num) { return "Rp" + Number(num || 0).toLocaleString('id-ID'); }
@@ -722,6 +749,17 @@ function renderKelasList() {
 function renderPesertaList() {
   const container = document.getElementById("list-peserta-container");
   if(!container) return; container.innerHTML = "";
+
+ // [BARU] Menambahkan tombol Banner VCF Khusus Kelas di bagian atas daftar peserta
+  const bannerVcf = document.createElement("div");
+  bannerVcf.style.cssText = "margin-bottom: 16px;";
+  bannerVcf.innerHTML = `
+    <button class="btn btn-secondary" onclick="downloadVCFSatuKelas()" style="border-color: var(--primary); color: var(--primary); font-weight:700; width:100%;">
+      📇 Simpan Kontak Seluruh Kelas ke HP (.vcf)
+    </button>
+  `;
+  container.appendChild(bannerVcf);
+ 
   const pesertaFiltered = APP_STATE.peserta.filter(p => p.id_kelas == CURRENT_CONTEXT.id_kelas);
   
   if(pesertaFiltered.length === 0) { container.innerHTML = "<p style='padding:12px;'>Belum ada siswa di kelas ini.</p>"; return; }
@@ -966,4 +1004,345 @@ function populateSekolahDatalist() {
   if(APP_STATE.sekolah) {
     APP_STATE.sekolah.forEach(s => { dl.innerHTML += `<option value="${s.nama_sekolah}"></option>`; });
   }
+}
+
+// --- FUNGSI GENERATE & DOWNLOAD VCF (KONTAK) ---
+
+/**
+ * Membuat format teks VCard (.vcf)
+ */
+function buatFormatVCard(nama, nomorWa, namaSekolah = '', namaKelas = '') {
+  let nomorFormatted = nomorWa ? nomorWa.toString().trim() : '';
+  if (nomorFormatted.startsWith("0")) {
+    nomorFormatted = "62" + nomorFormatted.slice(1);
+  }
+  nomorFormatted = nomorFormatted.replace(/[^0-9+]/g, ''); // bersihkan karakter non-angka
+
+  // Penamaan kontak otomatis agar rapi di HP (Contoh: Budi - SMAN 1 XI IPA)
+  let suffixOrg = [namaSekolah, namaKelas].filter(Boolean).join(' ');
+  let rawDisplayName = suffixOrg ? `${nama} - ${suffixOrg}` : nama;
+  
+  // Sanitasi karakter sensitif vCard
+  let displayName = rawDisplayName.replace(/[;,]/g, ' ');
+
+  return [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${displayName}`,
+    `N:;${displayName};;;`,
+    `TEL;TYPE=CELL:${nomorFormatted}`,
+    `NOTE:Peserta STIFIn Genetic 2026`,
+    'END:VCARD'
+  ].join('\r\n');
+}
+
+/**
+ * Mendownload file .vcf (Optimized with Memory Cleanup)
+ */
+function downloadFileVCF(filename, vcfContent) {
+  // Sanitasi nama file agar aman dari karakter terlarang OS
+  const safeFilename = filename.replace(/[/\\?%*:|"<>]/g, '_').replace(/\s+/g, '_');
+
+  const blob = new Blob([vcfContent], { type: 'text/vcard;charset=utf-8;' });
+  const objectUrl = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.setAttribute('download', safeFilename);
+  
+  document.body.appendChild(link);
+  link.click();
+  
+  // Cleanup DOM dan Memori Browser
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+}
+
+/**
+ * 1. Download VCF untuk Single Peserta (Halaman Detail)
+ */
+function downloadVCFPesertaDetail() {
+  const p = APP_STATE.peserta.find(x => x.id_peserta == CURRENT_CONTEXT.id_peserta);
+  if (!p) {
+    alert("Data peserta tidak ditemukan!");
+    return;
+  }
+
+  const kelas = APP_STATE.kelas.find(k => k.id_kelas == p.id_kelas);
+  const sekolah = APP_STATE.sekolah.find(s => s.id_sekolah == (kelas ? kelas.id_sekolah : null));
+
+  const namaSekolah = sekolah ? sekolah.nama_sekolah : '';
+  const namaKelas = kelas ? (kelas.nama_class || kelas.nama_kelas) : '';
+
+  const vcfData = buatFormatVCard(p.nama_peserta, p.whatsapp, namaSekolah, namaKelas);
+  const fileName = `Kontak_${p.nama_peserta}.vcf`;
+
+  downloadFileVCF(fileName, vcfData);
+}
+
+/**
+ * 2. Download VCF untuk Semua Peserta dalam 1 Kelas (Bulk Download)
+ */
+function downloadVCFSatuKelas() {
+  if (!CURRENT_CONTEXT.id_kelas) {
+    alert("Pilih kelas terlebih dahulu!");
+    return;
+  }
+
+  const pesertaFiltered = APP_STATE.peserta.filter(p => p.id_kelas == CURRENT_CONTEXT.id_kelas);
+  if (pesertaFiltered.length === 0) {
+    alert("Belum ada siswa di kelas ini untuk diekspor!");
+    return;
+  }
+
+  const kelas = APP_STATE.kelas.find(k => k.id_kelas == CURRENT_CONTEXT.id_kelas);
+  const sekolah = APP_STATE.sekolah.find(s => s.id_sekolah == (kelas ? kelas.id_sekolah : null));
+
+  const namaSekolah = sekolah ? sekolah.nama_sekolah : 'Sekolah';
+  const namaKelas = kelas ? (kelas.nama_class || kelas.nama_kelas) : 'Kelas';
+
+  let bulkVcfData = [];
+
+  pesertaFiltered.forEach(p => {
+    if (p.whatsapp) {
+      bulkVcfData.push(buatFormatVCard(p.nama_peserta, p.whatsapp, namaSekolah, namaKelas));
+    }
+  });
+
+  if (bulkVcfData.length === 0) {
+    alert("Tidak ada nomor WhatsApp yang valid di kelas ini!");
+    return;
+  }
+
+  const finalVcfContent = bulkVcfData.join('\r\n');
+  const fileName = `Kontak_Kelas_${namaSekolah}_${namaKelas}.vcf`;
+
+  downloadFileVCF(fileName, finalVcfContent);
+}
+
+// Fungsi untuk menutup modal WA
+function tutupModalWA() {
+  const modal = document.getElementById("modal-wa-template");
+  if (modal) modal.style.display = "none";
+}
+
+// Fungsi eksekusi pengiriman berdasarkan tombol yang diklik di Modal
+function eksekusiKirimWA(opsi) {
+  const p = APP_STATE.peserta.find(x => x.id_peserta == CURRENT_CONTEXT.id_peserta);
+  if (!p) return;
+
+  const sisaTagihanFix = Number(p.sis_tagihan || 0);
+  let teksPesan = "";
+
+  if (opsi === "1") {
+    // TEMPLATE 1: Ucapan Selamat
+    teksPesan = `Salam Sukses Mulia.. ✊
+
+ *"Perubahan Hidup Butuh Perbedaan Tindakan, Tanpa perbedaan tindakan perubahan adalah omong kosong"*
+
+*SELAMAT* ! 
+${p.nama_peserta} Kamu Terdaftar di Acara Roadshow *EVENT EDUTAINMENT STIFIn 2026 Kabupaten Labuhan batu* diselenggarakan oleh STIFIn Genetic Cabang SUMUT. 
+Bersama 
+1. *Mis. Eliza Fazira, S.T* (Branch Manager STIFIn Genetic Indonesia) & 
+2. *Mr. Saad Budiman Lubis, S.Pd.I., M.M.* (Trainer dan Motivator)
+
+Untuk Pembayaran selanjutnya di lakukan mulai besok dikumpul ke perwakilan Kelas.
+Bagi peserta yg sudah Lunas akan segera langsung mendapatkan *E-TIKET (BARCODE)* 
+
+Pembayaran bisa dilakukan secara langsung (cash) ke panitia atau lewat transfer :
+1. Transfer ke Rekening 
+         BSI : 7191133786 (M. Ikbal siregar)
+2. DANA : 0823 7084 1566
+3. Gopay : 0823 7084 1566
+
+Note :
+_*Nama yang sudah terdaftar sudah di input, dan uang yang sudah masuk tidak bisa di tarik kembali*_
+
+Terima Kasih🙏🏻☺️
+
+Yuuk silahkan di Follow ya IG 👇🏻 :
+@stifingenetic
+
+#GerakanSadarPotensi #Character #SelaluAdaJalan #stifingenetic`;
+
+  } else if (opsi === "2") {
+    // TEMPLATE 2: Pengingat Ramah
+    teksPesan = `Halo ${p.nama_peserta} 👋😊
+
+Semoga harimu menyenangkan!
+
+Sekadar mengingatkan kembali terkait pendaftaranmu di *EVENT EDUTAINMENT STIFIn 2026*. Saat ini untuk sisa cicil kamu sebesar *${formatRupiah(sisaTagihanFix)}*.
+
+Agar proses pendataan dan penyiapan berkas/fasilitas berjalan lancar, yuk segera dilunasi atau dicicil kembali melalui perwakilan kelas atau transfer ke:
+• *BSI:* 7191133786 (M. Ikbal siregar)
+• *DANA / Gopay:* 0823 7084 1566
+
+Jika sudah melakukan pembayaran, harap kirimkan bukti transfernya ke pesan ini ya. Terima kasih atas kerjasamanya! 🙏✨`;
+
+  } else if (opsi === "3") {
+    // TEMPLATE 3: Peringatan Keras
+    teksPesan = `⚠️ *PERINGATAN PEMBAYARAN - EVENT STIFIn 2026* ⚠️
+
+Kepada Yth. *${p.nama_peserta}*,
+
+Pemberitahuan penting mengenai status pendaftaran kamu pada acara *Roadshow STIFIn Genetic 2026*. Catatan sistem kami menunjukkan bahwa kamu masih memiliki sisa pembayaran sebesar *${formatRupiah(sisaTagihanFix)}* yang belum diselesaikan.
+
+Mengingat batas waktu (deadline) pendaftaran yang sudah mendesak, mohon untuk **SEGERA melakukan pelunasannya**. 
+
+Pembayaran dapat dikirim via transfer:
+• *BSI:* 7191133786 (M. Ikbal siregar)
+• *DANA / Gopay:* 0823 7084 1566
+
+*Catatan:* Jika ada kendala bisa sampaikan ke panitia. TERIMAKASIH.`;
+  }
+
+  // Format Nomor WhatsApp
+  let nomorFormatted = p.whatsapp.trim();
+  if (nomorFormatted.startsWith("0")) {
+    nomorFormatted = "62" + nomorFormatted.slice(1);
+  }
+
+  // Tutup Modal dan Buka WhatsApp
+  tutupModalWA();
+  window.open(`whatsapp://send?phone=${nomorFormatted}&text=${encodeURIComponent(teksPesan)}`, '_blank');
+}
+
+/// --- MODAL & LOGIKA FOLLOW UP SAMA DENGAN PROFIL PESERTA ---
+
+// Helper untuk membuka modal WA dari menu Follow Up
+function bukaModalWAFollowUp(idPeserta) {
+  CURRENT_CONTEXT.id_peserta = idPeserta;
+  const p = APP_STATE.peserta.find(x => x.id_peserta == idPeserta);
+  if (!p) {
+    alert("Data peserta tidak ditemukan!");
+    return;
+  }
+
+  const elNama = document.getElementById("wa-modal-nama-peserta");
+  if (elNama) elNama.innerText = p.nama_peserta;
+
+  const elSisa = document.getElementById("wa-modal-sisa-tagihan");
+  if (elSisa) elSisa.innerText = formatRupiah(Number(p.sis_tagihan || 0));
+
+  const modal = document.getElementById("modal-wa-template");
+  if (modal) modal.style.display = "flex";
+}
+
+/**
+ * Memuat dan menampilkan daftar peserta yang membutuhkan Follow Up
+ */
+function renderFollowUpList() {
+  const container = document.getElementById("followup-list");
+  if (!container) return;
+
+  populateFollowUpEventFilter();
+
+  const searchInput = document.getElementById("search-followup");
+  const eventFilter = document.getElementById("filter-followup-event");
+  
+  const keyword = searchInput ? searchInput.value.toLowerCase() : "";
+  const selectedEventId = eventFilter ? eventFilter.value : "all";
+
+  let listPeserta = (APP_STATE.peserta || []).filter(p => {
+    const sisaTagihan = Number(p.sis_tagihan || 0);
+    const isBelumLunas = sisaTagihan > 0 || p.status_bayar !== 'Lunas';
+    
+    const kelas = APP_STATE.kelas.find(k => k.id_kelas == p.id_kelas);
+    const idEventPeserta = kelas ? kelas.id_event : null;
+    
+    const matchEvent = selectedEventId === "all" || String(idEventPeserta) === String(selectedEventId);
+    
+    const nama = (p.nama_peserta || "").toLowerCase();
+    const wa = (p.whatsapp || "").toLowerCase();
+    const matchKeyword = nama.includes(keyword) || wa.includes(keyword);
+
+    return isBelumLunas && matchEvent && matchKeyword;
+  });
+
+  const badgeTotal = document.getElementById("total-followup-badge");
+  if (badgeTotal) badgeTotal.innerText = `${listPeserta.length} Perlu Follow Up`;
+
+  if (listPeserta.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 20px; text-align: center; color: var(--text-secondary);">
+        <p>🎉 Semua peserta sudah lunas atau tidak ada data follow up yang cocok!</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = listPeserta.map(p => {
+    const kelas = APP_STATE.kelas.find(k => k.id_kelas == p.id_kelas);
+    const idEvent = kelas ? kelas.id_event : null;
+    const idSekolah = kelas ? kelas.id_sekolah : null;
+    const sisaBayar = Number(p.sis_tagihan || 0);
+
+    return `
+      <div class="card-followup" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h4 style="margin: 0 0 4px 0; color: var(--text); font-size: 1.05rem;">${p.nama_peserta}</h4>
+            <small style="color: var(--text-secondary);">${getEventName(idEvent)} • ${getSekolahName(idSekolah)}</small>
+          </div>
+          <span class="badge badge-dp">
+            ${p.status_bayar || 'DP'}
+          </span>
+        </div>
+        
+        <div style="margin-top: 10px; font-size: 0.9rem;">
+          <p style="margin: 2px 0;"><strong>Sisa Tagihan:</strong> <span style="color: var(--danger); font-weight:700;">${formatRupiah(sisaBayar)}</span></p>
+          <p style="margin: 2px 0; color: var(--text-secondary);"><strong>No. WA:</strong> ${p.whatsapp || '-'}</p>
+        </div>
+
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          ${p.whatsapp ? `
+            <button onclick="bukaModalWAFollowUp('${p.id_peserta}')" 
+               class="btn-sm" 
+               style="background: #25D366; color: white; border: none; padding: 8px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+               💬 Chat WA
+            </button>
+          ` : ''}
+          <button onclick="switchView('detail-peserta', {id_peserta: '${p.id_peserta}'})" 
+                  class="btn-sm" 
+                  style="background: var(--surface-secondary); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer;">
+            👁️ Detail
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Trigger pencarian / penyaringan data Follow Up
+ */
+function filterFollowUp() {
+  renderFollowUpList();
+}
+
+/**
+ * Helper untuk mengisi dropdown filter event pada halaman Follow Up
+ */
+function populateFollowUpEventFilter() {
+  const selectEl = document.getElementById("filter-followup-event");
+  if (!selectEl || selectEl.children.length > 1) return;
+
+  if (APP_STATE.events && APP_STATE.events.length > 0) {
+    APP_STATE.events.forEach(e => {
+      const opt = document.createElement("option");
+      opt.value = e.id_event;
+      opt.textContent = e.nama_event;
+      selectEl.appendChild(opt);
+    });
+  }
+}
+
+/**
+ * Helper untuk merapikan format nomor HP ke format Internasional (+62)
+ */
+function formatPhoneNumber(phone) {
+  let cleaned = String(phone).replace(/\D/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.slice(1);
+  }
+  return cleaned;
 }
