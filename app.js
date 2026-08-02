@@ -1169,15 +1169,14 @@ Yuuk silahkan di Follow ya IG 👇🏻 :
     // TEMPLATE 2: Pengingat Ramah
     teksPesan = `Halo ${p.nama_peserta} 👋😊
 
-Semoga harimu menyenangkan!
+*_"Masa depan ditentukan oleh apa yang kamu lakukan setiap hari, bukan oleh apa yang sekedar kamu rencanakan esok"_*
 
 Sekadar mengingatkan kembali terkait pendaftaranmu di *EVENT EDUTAINMENT STIFIn 2026*. Saat ini untuk sisa cicil kamu sebesar *${formatRupiah(sisaTagihanFix)}*.
 
-Agar proses pendataan dan penyiapan berkas/fasilitas berjalan lancar, yuk segera dilunasi atau dicicil kembali melalui perwakilan kelas atau transfer ke:
-• *BSI:* 7191133786 (M. Ikbal siregar)
-• *DANA / Gopay:* 0823 7084 1566
+Besok jangan lupa untuk uang seminarnya dicicil/dibawa yaa dek.
+Yang besok lunas langsung dapat tiket barcodenya.
 
-Jika sudah melakukan pembayaran, harap kirimkan bukti transfernya ke pesan ini ya. Terima kasih atas kerjasamanya! 🙏✨`;
+Terimakasih.`;
 
   } else if (opsi === "3") {
     // TEMPLATE 3: Peringatan Keras
@@ -1196,15 +1195,15 @@ Pembayaran dapat dikirim via transfer:
 *Catatan:* Jika ada kendala bisa sampaikan ke panitia. TERIMAKASIH.`;
   }
 
-  // Format Nomor WhatsApp
-  let nomorFormatted = p.whatsapp.trim();
+  // Format Nomor WhatsApp (+62)
+  let nomorFormatted = p.whatsapp ? p.whatsapp.trim() : '';
   if (nomorFormatted.startsWith("0")) {
     nomorFormatted = "62" + nomorFormatted.slice(1);
   }
 
-  // Tutup Modal dan Buka WhatsApp
+  // Tutup Modal dan Buka WhatsApp via API Web Standar
   tutupModalWA();
-  window.open(`whatsapp://send?phone=${nomorFormatted}&text=${encodeURIComponent(teksPesan)}`, '_blank');
+  window.open(`https://wa.me/${nomorFormatted}?text=${encodeURIComponent(teksPesan)}`, '_blank');
 }
 
 /// --- MODAL & LOGIKA FOLLOW UP SAMA DENGAN PROFIL PESERTA ---
